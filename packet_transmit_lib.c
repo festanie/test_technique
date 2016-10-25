@@ -37,8 +37,9 @@ uint8_t * form_packet(transmit_param_t * transmit)
 
 	// Change start of image flag if last packet was the first
 	// or the last one;
-	if (soi || eoi)
-		soi = eoi;
+	if (eoi||(soi&&count!=0)){
+		soi = 0;
+	}
 
 	/****************************************************************
 	* 	Extraction of block of data from buffer
@@ -47,20 +48,20 @@ uint8_t * form_packet(transmit_param_t * transmit)
 	block = packet+head_len;
 
 	uint8_t eop = 0;
-	uint8_t cnt = 0;
-	block[cnt]=buffer_read_byte(transmit->buf);
+	uint8_t byte_cnt = 0;
+	block[byte_cnt]=buffer_read_byte(transmit->buf);
 
 	// Read buffer and check for end of file marker
 	while(!eop){
-		cnt++;
-		block[cnt]=buffer_read_byte(transmit->buf);
-		eoi = (block[cnt-1]==0xFF&&block[cnt]==0xD9);
-		eop=(eoi||cnt==block_len-1||block[cnt]);
+		byte_cnt++;
+		block[byte_cnt]=buffer_read_byte(transmit->buf);
+		eoi = (block[byte_cnt-1]==0xFF&&block[byte_cnt]==0xD9);
+		eop=(eoi||byte_cnt==block_len-1);
 	}
 
 	//If image not a multiple of block_len, last byte is 0x00
 	if (eoi){
-		block[cnt+1]=0x00;
+		block[byte_cnt+1]=0x00;
 	}
 
 
@@ -82,7 +83,6 @@ uint8_t * form_packet(transmit_param_t * transmit)
 	uint8_t last = eoi;
 
 	head[0]=first<<7|last<<6;
-	fprintf(stdout,"first: %d",first);
 	head[1]=(uint8_t)(count>>16);
 	head[2]=(uint8_t)(count>>8);
 	head[3]=(uint8_t)count;
@@ -99,18 +99,13 @@ uint8_t * form_packet(transmit_param_t * transmit)
 }
 
 
-uint64_t get_remaining_size(FILE * fp, uint64_t f_offset)
+uint64_t get_file_size(FILE * fp)
 {
 	uint64_t size;
 
 	fseek(fp,0,SEEK_END);
-	size=ftell(fp) - f_offset;
+	size=ftell(fp);
 	fseek(fp,0, SEEK_SET);
 
 	return size;
-}
-
-uint64_t get_file_size(FILE * fp)
-{
-	return get_remaining_size(fp,0);
 }

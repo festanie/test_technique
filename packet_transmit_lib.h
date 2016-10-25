@@ -17,10 +17,12 @@
 /********************************************************************
  * Packet Transmission Parameters
  *
- * fp : File from which the packet will be fetched
- * counter : number of the actual packet
- * headlen : size of the header
- * blocklen : size of the data part
+ * buf : 		pointer to the buffer containing the data 
+ * counter : 	number of the actual packet
+ * headlen : 	size of the header
+ * blocklen : 	size of the data part
+ * soi : 		start of image
+ * eoi : 		end of image
  *
  ********************************************************************/
 typedef struct
@@ -33,7 +35,22 @@ typedef struct
 	uint8_t eoi;
 }transmit_param_t;
 
+/********************************************************************
+* DESCRIPTION :	Creates a new transmit_param_t	
+*
+* INPUTS : 
+*			buf 		pointer to the buffer from which the 
+*						data to be transmitted will be read.
+*			head_len	header size
+*			block_len	data part size 
+*       
+* OUTPUTS :
+*       pointer to an initialised transmit_param_t. counter=0.
+*		soi=1. eoi=0
+*
+*********************************************************************/
 transmit_param_t * transmit_init(buffer_t * buf, uint8_t head_len, uint8_t block_len);
+
 
 /********************************************************************
 * DESCRIPTION :     Returns a transmission packet from a jpeg2000 
@@ -50,18 +67,14 @@ uint8_t * form_packet(transmit_param_t * transmit);
 
 
 /********************************************************************
-* DESCRIPTION :     Computes the number of bytes in the file
-*					from the given offset to the end. 
+* DESCRIPTION :     Computes file size. 
 *
 * INPUTS : 
 *		fp 		 	File pointer
-*		f_offset	number of offset bytes
 *       
 * OUTPUTS :
-*       size of the file from the given offset.
+*       size of the file.
 *********************************************************************/
-uint64_t get_remaining_size(FILE * fp, uint64_t f_offset);
-
 uint64_t get_file_size(FILE * fp);
 
 

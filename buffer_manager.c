@@ -15,6 +15,19 @@ buffer_t* buffer_init(size_t buffer_size){
 	return  buf;
 };
 
+
+int buffer_is_empty(buffer_t * buf){
+	return (buf->head==buf->tail);
+}
+
+size_t buffer_size(buffer_t * buf){
+	return (buf->tail-buf->head);
+}
+
+int buffer_is_afull(buffer_t * buf, size_t size){
+	return ((buf->maxlen-buf->tail)<size);
+}
+
 int buffer_write(buffer_t * buf,size_t data_len, uint8_t* data){
 	if(buf->maxlen-buf->tail<data_len){
 		fprintf(stderr,"No sufficient space in buffer to write data");
@@ -27,25 +40,17 @@ int buffer_write(buffer_t * buf,size_t data_len, uint8_t* data){
 	return 0;
 };
 
-int buffer_is_empty(buffer_t * buf){
-	return (buf->head==buf->tail);
-}
-
-size_t buffer_size(buffer_t * buf){
-	return (buf->tail-buf->head);
-}
-
 uint8_t buffer_read_byte(buffer_t * buf){
 	if (buffer_is_empty(buf)){
 		fprintf(stderr,"Can't read byte, buffer is empty");
-		return NULL;
+		return -1;
 	}
 	uint8_t byte = buf->buffer[buf->head];
 	buf->head++;
 	return byte;
 }
 
-int find_marker(uint16_t marker, buffer_t * buf){
+/*int find_marker(uint16_t marker, buffer_t * buf){
 	for(int i=buf->head; i<buf->tail-1; i++){
 		if (buf->buffer[i]==(uint8_t)marker>>8 && buf->buffer[i+1]==(uint8_t)marker) {
 			return i;
@@ -55,4 +60,5 @@ int find_marker(uint16_t marker, buffer_t * buf){
 	fprintf(stderr,"Marker %02X not found in buffer",marker);
 	return NULL;
 };
+*/
 

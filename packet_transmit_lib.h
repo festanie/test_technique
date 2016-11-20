@@ -8,35 +8,21 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "buffer_manager.h"
 
 #ifndef   	PACKET_TRANSMIT_H
 #define   	PACKET_TRANSMIT_H
 
 
 /********************************************************************
- * Packet Transmission Parameters
+ * Packet Transmision Object
  *
- * buf : 		pointer to the buffer containing the data 
- * counter : 	number of the actual packet
- * headlen : 	size of the header
- * blocklen : 	size of the data part
- * soi : 		start of image
- * eoi : 		end of image
+ * Structure containing information on the packet transmission.
  *
  ********************************************************************/
-typedef struct
-{
-	buffer_t * buf;
-	uint32_t counter;
-	uint8_t headlen;
-	uint8_t blocklen;
-	uint8_t soi;
-	uint8_t eoi;
-}transmit_param_t;
+typedef struct transmit_object_t transmit_object_t;
 
 /********************************************************************
-* DESCRIPTION :	Creates a new transmit_param_t	
+* DESCRIPTION :	Creates a new transmit_object_t	
 *
 * INPUTS : 
 *			buf 		pointer to the buffer from which the 
@@ -45,11 +31,21 @@ typedef struct
 *			block_len	data part size 
 *       
 * OUTPUTS :
-*       pointer to an initialised transmit_param_t. counter=0.
+*       pointer to an initialised transmit_object_t. counter=0.
 *		soi=1. eoi=0
 *
 *********************************************************************/
-transmit_param_t * transmit_init(buffer_t * buf, uint8_t head_len, uint8_t block_len);
+transmit_object_t * transmit_init(uint8_t * buf, uint8_t head_len, uint8_t block_len);
+
+/********************************************************************
+* DESCRIPTION :	Ends the existing transmission. Free used memory.	
+*
+* INPUTS : 
+*			transmit 		Packet transmission object
+*       
+*
+*********************************************************************/
+void transmit_end(transmit_object_t * transmit);
 
 
 /********************************************************************
@@ -57,14 +53,37 @@ transmit_param_t * transmit_init(buffer_t * buf, uint8_t head_len, uint8_t block
 *					file.
 *
 * INPUTS : 
-*		transmit 	Parameters of the packet transmission
+*		transmit 	Packet transmission object
 *       
 * OUTPUTS :
 *       pointer to the packet of data
 *
 *********************************************************************/
-uint8_t * form_packet(transmit_param_t * transmit);
+uint8_t * form_packet(transmit_object_t * transmit);
 
+/********************************************************************
+* DESCRIPTION :     Returns the actual packet number
+*
+* INPUTS : 
+*		transmit 	Packet transmission object
+*       
+* OUTPUTS :
+*       packet number
+*
+*********************************************************************/
+uint64_t get_packet_number(transmit_object_t * transmit);
+
+/********************************************************************
+* DESCRIPTION :     Returns if this is the last packet of image
+*
+* INPUTS : 
+*		transmit 	Packet transmission object
+*       
+* OUTPUTS :
+*       1 if end of image
+*
+*********************************************************************/
+uint8_t end_of_image(transmit_object_t * transmit);
 
 /********************************************************************
 * DESCRIPTION :     Computes file size. 

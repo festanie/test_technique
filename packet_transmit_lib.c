@@ -12,18 +12,62 @@
 
 #include "packet_transmit_lib.h"
 
-transmit_param_t * transmit_init(buffer_t * buf, uint8_t head_len, uint8_t block_len){
-	transmit_param_t * transmit = malloc(sizeof(transmit_param_t));
+/********************************************************************
+ * Packet Transmision Object
+ *
+ * buf : 		pointer to the buffer containing the data
+ * buf_pos : 	actual position in buffer
+ * packet:		pointer to the actual packet 
+ * counter : 	number of the actual packet
+ * headlen : 	size of the header
+ * blocklen : 	size of the data part
+ * soi : 		start of image
+ * eoi : 		end of image
+ *
+ ********************************************************************/
+
+struct transmit_object_t{
+	uint8_t * buf;
+	uint64_t buf_pos;
+	uint8_t * packet; 
+	uint32_t counter;
+	uint8_t headlen;
+	uint8_t blocklen;
+	uint8_t soi;
+	uint8_t eoi;
+};
+
+/********************************************************************
+ * transmit_init
+ ********************************************************************/
+transmit_object_t * transmit_init(uint8_t * buf, uint8_t head_len, uint8_t block_len){
+	transmit_object_t * transmit = malloc(sizeof(transmit_object_t));
 	transmit->buf=buf;
-	transmit->blocklen=block_len;
+	transmit->buf_pos = 0;
+	
+	transmit->packet = malloc((head_len+block_len)*sizeof(transmit->packet));
 	transmit->counter=0;
-	transmit->eoi=0;
+
 	transmit->headlen=head_len;
+	transmit->blocklen=block_len;
+
+	transmit->eoi=0;
 	transmit->soi=1;
 	return  transmit;
 };
 
-uint8_t * form_packet(transmit_param_t * transmit)
+/********************************************************************
+ * transmit_end
+ ********************************************************************/
+void transmit_end(transmit_object_t * transmit){
+	free(transmit->packet);
+	free(transmit);
+};
+
+/********************************************************************
+ * form_packet
+ ********************************************************************/
+uint8_t * form_packet(transmit_object_t * transmit)
 {
 
 	uint64_t count = transmit->counter;
@@ -31,9 +75,8 @@ uint8_t * form_packet(transmit_param_t * transmit)
 	uint8_t head_len = transmit->headlen;
 	uint8_t soi = transmit->soi;
 	uint8_t eoi = transmit->eoi;
-		
-	uint8_t * packet;
-	packet = (uint8_t *) malloc(head_len+block_len);
+	uint8_t *packet = transmit->packet;
+
 
 	// Change start of image flag if last packet was the first
 	// or the last one;
@@ -44,27 +87,31 @@ uint8_t * form_packet(transmit_param_t * transmit)
 	/****************************************************************
 	* 	Extraction of block of data from buffer
 	*****************************************************************/
-	uint8_t *block;
-	block = packet+head_len;
-
+	uint8_t *block = packet+head_len;
+	
+	uint8_t *buf_head = transmit->buf+transmit->buf_pos;
 	uint8_t eop = 0;
 	uint8_t byte_cnt = 0;
-	block[byte_cnt]=buffer_read_byte(transmit->buf);
+	block[0]=buf_head[0];
 
 	// Read buffer and check for end of file marker
 	while(!eop){
 		byte_cnt++;
-		block[byte_cnt]=buffer_read_byte(transmit->buf);
+		block[byte_cnt]=buf_head[byte_cnt];
 		eoi = (block[byte_cnt-1]==0xFF&&block[byte_cnt]==0xD9);
 		eop=(eoi||byte_cnt==block_len-1);
 	}
 
-	//If image not a multiple of block_len, last byte is 0x00
+	transmit->buf_pos = transmit->buf_pos+byte_cnt+1;
+	
+	//If image not a multiple of block_len, last bytes are 0x00
 	if (eoi){
-		block[byte_cnt+1]=0x00;
+		for (int i=byte_cnt+1; i<block_len; i++){
+			block[i]=0x00;
+		}
 	}
 
-
+	
 	/****************************************************************
 	*	Constitution of header
 	*	---------------------------------------------------
@@ -98,7 +145,25 @@ uint8_t * form_packet(transmit_param_t * transmit)
 
 }
 
+/********************************************************************
+ * get_packet_number
+ ********************************************************************/
+uint64_t get_packet_number(transmit_object_t * transmit)
+{
+	return transmit->counter;
+}
 
+/********************************************************************
+ * end_of_image
+ ********************************************************************/
+uint8_t end_of_image(transmit_object_t * transmit)
+{
+	return transmit->eoi;
+}
+
+/********************************************************************
+ * get_file_size
+ ********************************************************************/
 uint64_t get_file_size(FILE * fp)
 {
 	uint64_t size;

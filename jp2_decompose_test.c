@@ -20,7 +20,12 @@
 #include <errno.h>
 
 #include "packet_transmit_lib.h"
-#include "buffer_manager.h"
+
+#define N_IMAGE 25;
+#define HEAD_LEN 4;
+#define BLOCK_LEN 200;
+
+
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +34,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	//Write jp2 file in buffer
 	FILE * fp;
 
 	fp=fopen(argv[1],"rb");
@@ -37,48 +43,45 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	//Write jp2 files in buffer
-
-	size_t buffer_size = 1024*200;
-	buffer_t * j2k_buf = buffer_init(buffer_size);
 	size_t f_size = get_file_size(fp);
-	uint8_t * data = malloc(f_size);
-	fread(data,1,f_size,fp);
+	uint8_t * j2k_buf = malloc(f_size*sizeof(j2k_buf));
+	fread(j2k_buf,1,f_size,fp);
 
 	fclose(fp);
 
-	while (!(buffer_is_afull(j2k_buf,f_size))){
-		buffer_write(j2k_buf, f_size, data);
-	}
 
-	free(data);
 
 	//Decompose buffer in packets
 
-	uint8_t head_len=4;
-	uint8_t block_len=200;
-
-
-	transmit_param_t * param = transmit_init(j2k_buf, head_len, block_len);
+	uint8_t head_len=HEAD_LEN;
+	uint8_t block_len=BLOCK_LEN;
+	uint8_t n_img = N_IMAGE;
+	transmit_object_t * tr_object = transmit_init(j2k_buf, head_len, block_len);
 	uint8_t * packet;
 
 	fp=fopen(argv[2],"wb");
 
-	while (!buffer_is_empty(j2k_buf)){
+	for(int img=0;img<n_img; img++){
+		
+		while (!end_of_image(tr_object)){
 
-		packet = form_packet(param);
+			packet = form_packet(tr_object);
 
-		// Print output packets in file
-		fprintf(fp, "Packet %i : \n",param->counter);
-		for(int i=0;i<head_len+block_len; i++){
-			fprintf(fp,"%02X ", packet[i] );
-			if (i%16==15) {fprintf(fp,"\n");}
+			// Print output packets in file
+			fprintf(fp, "Packet %i : \n",get_packet_number(tr_object));
+			for(int i=0;i<head_len+block_len; i++){
+				fprintf(fp,"%02X ", packet[i] );
+				if (i%16==15) {fprintf(fp,"\n");}
+			}
+			fprintf(fp,"\n\n");
 		}
-		fprintf(fp,"\n\n");
 	}
 
 	fclose(fp);
-
+	
+	//End Transmission
+	transmit_end(tr_object);
+	free(j2k_buf);
 
 	return 0;
 

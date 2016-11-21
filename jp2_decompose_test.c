@@ -56,24 +56,19 @@ int main(int argc, char *argv[])
 	uint8_t head_len=HEAD_LEN;
 	uint8_t block_len=BLOCK_LEN;
 	uint8_t n_img = N_IMAGE;
-	transmit_object_t * tr_object = transmit_init(j2k_buf, head_len, block_len);
-	uint8_t * packet;
+	transmit_object_t * tr_object = transmit_init(head_len, block_len);
 
 	fp=fopen(argv[2],"wb");
 
 	for(int img=0;img<n_img; img++){
-		
-		while (!end_of_image(tr_object)){
+		transmit_set_buf(tr_object, j2k_buf, f_size);
+		while (!end_of_buffer(tr_object)){
 
-			packet = form_packet(tr_object);
+			form_packet(tr_object);
 
 			// Print output packets in file
-			fprintf(fp, "Packet %i : \n",get_packet_number(tr_object));
-			for(int i=0;i<head_len+block_len; i++){
-				fprintf(fp,"%02X ", packet[i] );
-				if (i%16==15) {fprintf(fp,"\n");}
-			}
-			fprintf(fp,"\n\n");
+			print_packet(tr_object, fp);
+
 		}
 	}
 
@@ -86,3 +81,4 @@ int main(int argc, char *argv[])
 	return 0;
 
 }
+

@@ -9,14 +9,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "packet_transmit_lib.h"
 
 /********************************************************************
- * Packet Transmision Object
+ * Packet Transmission Object
  *
  * buf : 		pointer to the buffer containing the data
  * buf_pos : 	actual position in buffer
+ * buf_size :	size of buffer
  * packet:		pointer to the actual packet 
  * counter : 	number of the actual packet
  * headlen : 	size of the header
@@ -26,24 +28,23 @@
  *
  ********************************************************************/
 
-struct transmit_object_t{
+/*struct transmit_object_t{
 	uint8_t * buf;
 	uint64_t buf_pos;
+	uint64_t buf_size;
 	uint8_t * packet; 
 	uint32_t counter;
 	uint8_t headlen;
 	uint8_t blocklen;
 	uint8_t soi;
 	uint8_t eoi;
-};
+};*/
 
 /********************************************************************
  * transmit_init
  ********************************************************************/
-transmit_object_t * transmit_init(uint8_t * buf, uint8_t head_len, uint8_t block_len){
+transmit_object_t * transmit_init(uint8_t head_len, uint8_t block_len){
 	transmit_object_t * transmit = malloc(sizeof(transmit_object_t));
-	transmit->buf=buf;
-	transmit->buf_pos = 0;
 	
 	transmit->packet = malloc((head_len+block_len)*sizeof(transmit->packet));
 	transmit->counter=0;
@@ -57,6 +58,14 @@ transmit_object_t * transmit_init(uint8_t * buf, uint8_t head_len, uint8_t block
 };
 
 /********************************************************************
+ * transmit_set_buf
+ ********************************************************************/
+void transmit_set_buf(transmit_object_t * transmit, uint8_t * buf, uint64_t buf_size){
+	transmit->buf=buf;
+	transmit->buf_pos = 0;
+	transmit->buf_size=buf_size;
+}
+/********************************************************************
  * transmit_end
  ********************************************************************/
 void transmit_end(transmit_object_t * transmit){
@@ -67,7 +76,7 @@ void transmit_end(transmit_object_t * transmit){
 /********************************************************************
  * form_packet
  ********************************************************************/
-uint8_t * form_packet(transmit_object_t * transmit)
+void * form_packet(transmit_object_t * transmit)
 {
 
 	uint64_t count = transmit->counter;
@@ -78,12 +87,14 @@ uint8_t * form_packet(transmit_object_t * transmit)
 	uint8_t *packet = transmit->packet;
 
 
-	// Change start of image flag if last packet was the first
+	// Change start of image flag if previous packet was the first
 	// or the last one;
-	if (eoi||(soi&&count!=0)){
+	if (soi&&count!=0){
 		soi = 0;
 	}
-
+	if (eoi){
+		soi = 1;
+	}
 	/****************************************************************
 	* 	Extraction of block of data from buffer
 	*****************************************************************/
@@ -156,10 +167,29 @@ uint64_t get_packet_number(transmit_object_t * transmit)
 /********************************************************************
  * end_of_image
  ********************************************************************/
-uint8_t end_of_image(transmit_object_t * transmit)
+uint8_t end_of_buffer(transmit_object_t * transmit)
 {
-	return transmit->eoi;
+	uint8_t eob = (transmit->buf_pos==transmit->buf_size);
+	return  eob;
 }
+
+
+/********************************************************************
+ * print_packet
+ ********************************************************************/
+void print_packet(transmit_object_t * transmit, FILE * fp)
+{
+
+	fprintf(fp, "Packet %"PRIu64 ": \n",get_packet_number(transmit));
+		for(int i=0;i<transmit->headlen+transmit->blocklen; i++){
+			fprintf(fp,"%02X ", transmit->packet[i] );
+			if (i%16==15) {fprintf(fp,"\n");}
+		}
+		fprintf(fp,"\n\n");
+}
+
+
+
 
 /********************************************************************
  * get_file_size
@@ -174,3 +204,4 @@ uint64_t get_file_size(FILE * fp)
 
 	return size;
 }
+

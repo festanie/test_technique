@@ -1,5 +1,5 @@
 /*
- * Author: 	St�phanie Kerckhof
+ * Author: 	Stephanie Kerckhof
  * Purpose: Functions helping to the transmission of files in
  * 			smaller packets.
  */
@@ -19,13 +19,23 @@
  * Structure containing information on the packet transmission.
  *
  ********************************************************************/
-typedef struct transmit_object_t transmit_object_t;
+typedef struct transmit_object_t
+{	uint8_t * buf;
+	uint64_t buf_pos;
+	uint64_t buf_size;
+	uint8_t * packet;
+	uint32_t counter;
+	uint8_t headlen;
+	uint8_t blocklen;
+	uint8_t soi;
+	uint8_t eoi;
+} transmit_object_t;
 
 /********************************************************************
 * DESCRIPTION :	Creates a new transmit_object_t	
 *
 * INPUTS : 
-*			buf 		pointer to the buffer from which the 
+*			buf 		pointer to the image buffer from which the
 *						data to be transmitted will be read.
 *			head_len	header size
 *			block_len	data part size 
@@ -35,7 +45,7 @@ typedef struct transmit_object_t transmit_object_t;
 *		soi=1. eoi=0
 *
 *********************************************************************/
-transmit_object_t * transmit_init(uint8_t * buf, uint8_t head_len, uint8_t block_len);
+transmit_object_t * transmit_init(uint8_t head_len, uint8_t block_len);
 
 /********************************************************************
 * DESCRIPTION :	Ends the existing transmission. Free used memory.	
@@ -49,17 +59,27 @@ void transmit_end(transmit_object_t * transmit);
 
 
 /********************************************************************
-* DESCRIPTION :     Returns a transmission packet from a jpeg2000 
-*					file.
+* DESCRIPTION :	Set buffer properties in transmit object.
+*
+* INPUTS :
+*			transmit 		Packet transmission object
+*			buf				pointer to image buffer
+*			buf_size		size of image buffer
+*
+*
+*********************************************************************/
+void transmit_set_buf(transmit_object_t * transmit, uint8_t * buf, uint64_t buf_size);
+
+/********************************************************************
+* DESCRIPTION :     Update information contained in transmission
+* 					object relatively to actual packet.
 *
 * INPUTS : 
 *		transmit 	Packet transmission object
 *       
-* OUTPUTS :
-*       pointer to the packet of data
 *
 *********************************************************************/
-uint8_t * form_packet(transmit_object_t * transmit);
+void * form_packet(transmit_object_t * transmit);
 
 /********************************************************************
 * DESCRIPTION :     Returns the actual packet number
@@ -85,6 +105,19 @@ uint64_t get_packet_number(transmit_object_t * transmit);
 *********************************************************************/
 uint8_t end_of_image(transmit_object_t * transmit);
 
+
+/********************************************************************
+* DESCRIPTION :     Print packet to file
+*
+* INPUTS :
+*		transmit 	Packet transmission object
+*		fp			Pointer to the file in which the packet will be
+*					printed
+*
+*
+*********************************************************************/
+void print_packet(transmit_object_t * transmit, FILE * fp);
+
 /********************************************************************
 * DESCRIPTION :     Computes file size. 
 *
@@ -99,3 +132,4 @@ uint64_t get_file_size(FILE * fp);
 
 
 #endif
+
